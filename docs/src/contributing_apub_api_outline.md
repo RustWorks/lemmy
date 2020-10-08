@@ -1,380 +1,249 @@
 # Activitypub API outline
 
-**This document is completely outdated and doesn't reflect the current state of Lemmy at all**
+Lemmy does not yet follow the ActivityPub spec in all regards. For example, we don't set a valid context indicating our context fields. We also ignore fields like `inbox`, `outbox` or `endpoints` for remote actors, and assume that everything is Lemmy. For an overview of deviations, read [#698](https://github.com/LemmyNet/lemmy/issues/698). They will be fixed in the near future.
 
-- Start with the [reddit API](https://www.reddit.com/dev/api), and find [Activitypub vocab](https://www.w3.org/TR/activitystreams-vocabulary/) to match it.
-
-<!-- toc -->
-
-- [Actors](#actors)
-  * [User / Person](#user--person)
-  * [Community / Group](#community--group)
-- [Objects](#objects)
-  * [Post / Page](#post--page)
-  * [Post Listings / Ordered CollectionPage](#post-listings--ordered-collectionpage)
-  * [Comment / Note](#comment--note)
-  * [Comment Listings / Ordered CollectionPage](#comment-listings--ordered-collectionpage)
-  * [Deleted thing / Tombstone](#deleted-thing--tombstone)
-- [Actions](#actions)
-  * [Comments](#comments)
-    + [Create](#create)
-    + [Delete](#delete)
-    + [Update](#update)
-    + [Read](#read)
-    + [Like](#like)
-    + [Dislike](#dislike)
-  * [Posts](#posts)
-    + [Create](#create-1)
-    + [Delete](#delete-1)
-    + [Update](#update-1)
-    + [Read](#read-1)
-  * [Communities](#communities)
-    + [Create](#create-2)
-    + [Delete](#delete-2)
-    + [Update](#update-2)
-    + [Join](#join)
-    + [Leave](#leave)
-  * [Moderator](#moderator)
-    + [Ban user from community / Block](#ban-user-from-community--block)
-    + [Delete Comment](#delete-comment)
-    + [Invite a moderator](#invite-a-moderator)
-    + [Accept Invitation](#accept-invitation)
-    + [Reject Invitation](#reject-invitation)
-
-<!-- tocstop -->
+In the following document, `Content` refers to either an ActivityPub `Page` or `Note`. `ContentAction` refers to any of `Create/Content`, `Update/Content`, `Like/Content`, `Dislike/Content`, `Remove/Content` or `Delete/Content`.
 
 ## Actors
 
-### [User / Person](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-person)
-```
+### Community
+
+Sends activities to user: `Accept/Follow`, `Announce/ContentAction`
+
+Receives activities from user: `Follow`, `Undo/Follow`, `Create/Content`, `Update/Content`, `Like/Content`, `Dislike/Content`, `Remove/Content` (only admin/mod), `Delete/Content` (only creator), `Undo/ContentAction` (only for own actions)
+
+```json
 {
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Person",
-  "id": "https://instance_url/api/v1/user/sally_smith",
-  "inbox": "https://instance_url/api/v1/user/sally_smith/inbox",
-  "outbox": "https://instance_url/api/v1/user/sally_smith/outbox",
-  "liked": "https://instance_url/api/v1/user/sally_smith/liked",
-  // TODO disliked?
-  "following": "https://instance_url/api/v1/user/sally_smith/following",
-  "name": "sally_smith", 
-  "preferredUsername": "Sally",
-  "icon"?: {
-    "type": "Image",
-    "name": "User icon",
-    "url": "https://instance_url/api/v1/user/sally_smith/icon.png",
-    "width": 32,
-    "height": 32
-  },
-  "published": "2014-12-31T23:00:00-08:00",
-  "summary"?: "This is sally's profile."
+    "@context": "https://www.w3.org/ns/activitystreams",
+    "id": "http://enterprise.lemmy.ml/c/main",
+    "type": "Group",
+    "name": "main",
+    "preferredUsername": "The Main Community",
+    "category": { 
+        "identifier": "1",
+        "name": "Discussion"
+    },
+    "sensitive": false,
+    "attributedTo": [
+        "http://enterprise.lemmy.ml/u/picard",
+        "http://enterprise.lemmy.ml/u/riker"
+    ],
+    "content": "Welcome to the default community!",
+    "icon": {
+        "type": "Image",
+        "url": "http://enterprise.lemmy.ml/pictrs/image/Z8pFFb21cl.png"
+    },
+    "image": {
+        "type": "Image",
+        "url": "http://enterprise.lemmy.ml/pictrs/image/Wt8zoMcCmE.jpg"
+    },
+    "inbox": "http://enterprise.lemmy.ml/c/main/inbox",
+    "outbox": "http://enterprise.lemmy.ml/c/main/outbox",
+    "followers": "http://enterprise.lemmy.ml/c/main/followers",
+    "endpoints": {
+        "sharedInbox": "http://enterprise.lemmy.ml/inbox"
+    },
+    "published": "2020-10-06T17:27:43.282386+00:00",
+    "updated": "2020-10-08T11:57:50.545821+00:00",
+    "publicKey": {
+        "id": "http://enterprise.lemmy.ml/c/main#main-key",
+        "owner": "http://enterprise.lemmy.ml/c/main",
+        "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9JJ7Ybp/H7iXeLkWFepg\ny4PHyIXY1TO9rK3lIBmAjNnkNywyGXMgUiiVhGyN9yU7Km8aWayQsNHOkPL7wMZK\nnY2Q+CTQv49kprEdcDVPGABi6EbCSOcRFVaUjjvRHf9Olod2QP/9OtX0oIFKN2KN\nPIUjeKK5tw4EWB8N1i5HOuOjuTcl2BXSemCQLAlXerLjT8xCarGi21xHPaQvAuns\nHt8ye7fUZKPRT10kwDMapjQ9Tsd+9HeBvNa4SDjJX1ONskNh2j4bqHHs2WUymLpX\n1cgf2jmaXAsz6jD9u0wfrLPelPJog8RSuvOzDPrtwX6uyQOl5NK00RlBZwj7bMDx\nzwIDAQAB\n-----END PUBLIC KEY-----\n"
+    }
 }
 ```
 
-### [Community / Group](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-group)
-```
+| Field Name | Mandatory | Description |
+|---|---|---|
+| `@context` | yes | The ActivityPub context |
+| `id` | yes | Unique ID of this object |
+| `type` | yes | Type of this object |
+| `name` | yes | Name of the actor |
+| `preferredUsername` | yes | Displayname |
+| `category` | yes | Hardcoded list of categories, see https://dev.lemmy.ml/api/v1/categories |
+| `sensitive` | yes | True indicates that all posts in the community are nsfw |
+| `attributedTo` | yes | First the community creator, then all the remaining moderators |
+| `content` | no | Text for the community sidebar, usually containing a description and rules |
+| `icon` | no | Icon, shown next to the community name |
+| `image` | no | Banner image, shown on top of the community page |
+| `inbox` | no | ActivityPub inbox URL |
+| `outbox` | no | ActivityPub outbox URL, only contains up to 20 latest posts, no comments, votes or other activities |
+| `followers` | no | Follower collection URL, only contains the number of followers, no references to individual followers |
+| `endpoints` | no | Contains URL of shared inbox |
+| `published` | no | Datetime when the community was first created |
+| `updated` | no | Datetime when the community was last changed |
+| `publicKey` | yes | The public key used to verify signatures from this actor |
+   
+### User
+
+Sends activities to Community: `Follow`, `Undo/Follow`, `Create/Content`, `Update/Content`, `Like/Content`, `Dislike/Content`, `Remove/Content` (only admin/mod), `Delete/Content` (only creator), `Undo/ContentAction` (only for own actions)
+
+Receives activities from Community: `Accept/Follow`, `Announce/ContentAction`
+
+Sends and receives activities from/to other users: All those related to private messages, namely `Create/Note`, `Update/Note`, `Delete/Note`, `Undo/Delete/Note`
+
+```json
 {
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Group",
-  "id": "https://instance_url/api/v1/community/today_i_learned",
-  "name": "today_i_learned"
-  "attributedTo": [ // The moderators
-    "http://joe.example.org",
-  ],
-  "followers": "https://instance_url/api/v1/community/today_i_learned/followers",
-  "published": "2014-12-31T23:00:00-08:00",
-  "summary"?: "The group's tagline",
-  "attachment: [{}] // TBD, these would be where strong types for custom styles, and images would work.
+    "@context": "https://www.w3.org/ns/activitystreams",
+    "id": "http://enterprise.lemmy.ml/u/picard",
+    "type": "Person",
+    "name": "lemmy_alpha",
+    "preferredUsername": "Jean-Luc Picard",
+    "summary": "The user bio",
+    "icon": {
+        "type": "Image",
+        "url": "http://enterprise.lemmy.ml/pictrs/image/DS3q0colRA.jpg"
+    },
+    "image": {
+        "type": "Image",
+        "url": "http://enterprise.lemmy.ml/pictrs/image/XenaYI5hTn.png"
+    },
+    "inbox": "http://enterprise.lemmy.ml/u/picard/inbox",
+    "endpoints": {
+        "sharedInbox": "http://enterprise.lemmy.ml/inbox"
+    },
+    "published": "2020-10-06T17:27:43.234391+00:00",
+    "updated": "2020-10-08T11:27:17.905625+00:00",
+    "publicKey": {
+        "id": "http://enterprise.lemmy.ml/u/picard#main-key",
+        "owner": "http://enterprise.lemmy.ml/u/picard",
+        "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyH9iH83+idw/T4QpuRSY\n5YgQ/T5pJCNxvQWb6qcCu3gEVigfbreqZKJpOih4YT36wu4GjPfoIkbWJXcfcEzq\nMEQoYbPStuwnklpN2zj3lRIPfGLht9CAlENLWikTUoW5kZLyU6UQtOGdT2b1hDuK\nsUEn67In6qYx6pal8fUbO6X3O2BKzGeofnXgHCu7QNIuH4RPzkWsLhvwqEJYP0zG\nodao2j+qmhKFsI4oNOUCGkdJejO7q+9gdoNxAtNNKilIOwUFBYXeZJb+XGlzo0X+\n70jdJ/xQCPlPlItU4pD/0FwPLtuReoOpMzLi20oDsPXJBvn+/NJaxqDINuywcN5p\n4wIDAQAB\n-----END PUBLIC KEY-----\n"
+    }
 }
 ```
+
+| Field Name | Mandatory | Description |
+|---|---|---|
+| `@context` | yes | The ActivityPub context |
+| `id` | yes | Unique ID of this object |
+| `type` | yes | Type of this object |
+| `name` | yes | Name of the actor |
+| `preferredUsername` | yes | Displayname |
+| `summary` | no | User bio |
+| `icon` | no | The user's avatar, shown next to the username |
+| `image` | no | The user's banner, shown on top of the profile |
+| `inbox` | no | ActivityPub inbox URL |
+| `endpoints` | no | Contains URL of shared inbox |
+| `published` | no | Datetime when the user signed up |
+| `updated` | no | Datetime when the user profile was last changed |
+| `publicKey` | yes | The public key used to verify signatures from this actor |
 
 ## Objects
 
-### [Post / Page](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-page) 
-```
+### Post
+
+```json
 {
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Page",
-  "id": "https://instance_url/api/v1/post/1",
-  "name": "The title of a post, maybe a link to imgur",
-  "url": "https://news.blah.com"
-  "attributedTo": "http://joe.example.org", // The poster
-  "published": "2014-12-31T23:00:00-08:00",
+    "@context": "https://www.w3.org/ns/activitystreams",
+    "id": "https://voyager.lemmy.ml/post/29",
+    "type": "Page",
+    "attributedTo": "https://voyager.lemmy.ml/u/picard",
+    "to": "https://voyager.lemmy.ml/c/main",
+    "summary": "Test thumbnail 2",
+    "content": "blub blub",
+    "url": "https://voyager.lemmy.ml:/pictrs/image/fzGwCsq7BJ.jpg",
+    "image": {
+        "type": "Image",
+        "url": "https://voyager.lemmy.ml/pictrs/image/UejwBqrJM2.jpg"
+    },
+    "commentsEnabled": true,
+    "sensitive": false,
+    "stickied": false,
+    "published": "2020-09-24T17:42:50.396237+00:00",
+    "updated": "2020-09-24T18:31:14.158618+00:00",
 }
 ```
 
-### [Post Listings / Ordered CollectionPage](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-orderedcollectionpage)
-```
+| Field Name | Mandatory | Description |
+|---|---|---|
+| `@context` | yes | The ActivityPub context |
+| `id` | yes | Unique ID of this object |
+| `type` | yes | Type of this object |
+| `attributedTo` | yes | ID of the user which created this post |
+| `to` | yes | ID of the community where it was posted to |
+| `summary` | yes | Title of the post |
+| `content` | no | Body of the post |
+| `url` | no | An arbitrary link to be shared |
+| `image` | no | Thumbnail for `url`, only present if it is an image link |
+| `commentsEnabled` | yes | False indicates that the post is locked, and no comments can be added |
+| `sensitive` | yes | True marks the post as NSFW, blurs the thumbnail and hides it from users with NSFW settign disabled |
+| `stickied` | yes | True means that it is shown on top of the community |
+| `published` | no | Datetime when the post was created |
+| `updated` | no | Datetime when the post was edited (not present if it was never edited) |
+
+### Comment
+
+```json
 {
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "OrderedCollectionPage",
-  "id": "https://instance_url/api/v1/posts?type={all, best, front}&sort={}&page=1,
-  "partOf": "http://example.org/foo",
-  "orderedItems": [Posts]
+    "@context": "https://www.w3.org/ns/activitystreams",
+    "id": "https://enterprise.lemmy.ml/comment/95",
+    "type": "Note",
+    "attributedTo": "https://enterprise.lemmy.ml/u/picard",
+    "to": "https://enterprise.lemmy.ml/c/main",
+    "content": "mmmk",
+    "inReplyTo": [
+        "https://enterprise.lemmy.ml/post/38",
+        "https://voyager.lemmy.ml/comment/73"
+    ],
+    "published": "2020-10-06T17:53:22.174836+00:00",
+    "updated": "2020-10-06T17:53:22.174836+00:00"
 }
 ```
 
-### [Comment / Note](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-note)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Note",
-  "id": "https://instance_url/api/v1/comment/1",
-  "mediaType": "text/markdown",
-  "content": "Looks like it is going to rain today. Bring an umbrella *if necessary*!"
-  "attributedTo": john_id,
-  "inReplyTo": "comment or post id",
-  "published": "2014-12-31T23:00:00-08:00",
-  "updated"?: "2014-12-12T12:12:12Z"
-  "replies" // TODO, not sure if these objects should embed all replies in them or not.
-  "to": [sally_id, group_id]
-}
-```
-### [Comment Listings / Ordered CollectionPage](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-orderedcollectionpage)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "OrderedCollectionPage",
-  "id": "https://instance_url/api/v1/comments?type={all,user,community,post,parent_comment}&id=1&page=1,
-  "partOf": "http://example.org/foo",
-  "orderedItems": [Comments]
-}
-```
-### [Deleted thing / Tombstone](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone)
-```
-{
-  "type": "Tombstone",
-  "formerType": "Note / Post",
-  "id": note / post_id,
-  "deleted": "2016-03-17T00:00:00Z"
-}
-```
-## Actions
-- These are all posts to a user's outbox.
-- The server then creates a post to the necessary inbox of the recipient, or the followers.
-- Whenever a user accesses the site, they do a get from their inbox.
+| Field Name | Mandatory | Description |
+|---|---|---|
+| `@context` | yes | The ActivityPub context |
+| `id` | yes | Unique ID of this object |
+| `type` | yes | Type of this object |
+| `attributedTo` | yes | ID of the user who created the comment |
+| `to` | yes | Community where the comment was made |
+| `content` | yes | The comment text |
+| `inReplyTo` | yes | IDs of the post where this comment was made, and the parent comment. If this is a top-level comment, `inReplyTo` only contains the post |
+| `published` | no | Datetime when the comment was created |
+| `updated` | no | Datetime when the comment was edited (not present if it was never edited) |
 
-### Comments
-#### [Create](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-create)
-```
+### Private Message
+
+```json
 {
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Create",
-  "actor": id,
-  "object": comment_id, or post_id
-}
-```
-#### [Delete](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-delete)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Delete",
-  "actor": id,
-  "object": comment_id, or post_id
-}
-```
-#### [Update](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-update)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Create",
-  "actor": id,
-  "object": comment_id, or post_id
-  "content": "New comment",
-  "updated": "New Date"
-}
-```
-#### [Read](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-read)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Read",
-  "actor": user_id
-  "object": comment_id
+    "@context": "https://www.w3.org/ns/activitystreams",
+    "id": "http://enterprise.lemmy.ml/private_message/34",
+    "type": "Note",
+    "attributedTo": "http://enterprise.lemmy.ml/u/picard",
+    "to": "http://voyager.lemmy.ml/u/janeway",
+    "content": "test",
+    "published": "2020-10-08T19:10:46.542820+00:00",
+    "updated": "2020-10-08T20:13:52.547156+00:00",
 }
 ```
 
-#### [Like](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-like)
-- TODO: Should likes be notifications? IE, have a to?
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Like",
-  "actor": user_id
-  "object": comment_id
-  // TODO different types of reactions, or no?
-}
-```
-#### [Dislike](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-dislike)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Dislike",
-  "actor": user_id
-  "object": comment_id
-  // TODO different types of reactions, or no?
-}
-```
+| Field Name | Mandatory | Description |
+|---|---|---|
+| `@context` | yes | The ActivityPub context |
+| `id` | yes | Unique ID of this object |
+| `type` | yes | Type of this object |
+| `attributedTo` | ID of the user who created this private message |
+| `to` | ID of the recipient |
+| `content` | yes | The text of the private message |
+| `published` | no | Datetime when the message was created |
+| `updated` | no | Datetime when the message was edited (not present if it was never edited) |
 
-### Posts
-#### [Create](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-create)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Create",
-  "actor": id,
-  "to": community_id/followers
-  "object": post_id
-}
-```
-#### [Delete](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-delete)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Delete",
-  "actor": id,
-  "object": comment_id, or post_id
-}
-```
+## Activities
 
-#### [Update](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-update)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Create",
-  "actor": id,
-  "object": comment_id, or post_id
-  TODO fields.
-}
-```
-#### [Read](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-read)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Read",
-  "actor": user_id
-  "object": post_id
-}
-```
+### Follow/Unfollow
 
-### Communities
-#### [Create](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-create)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Create",
-  "actor": id,
-  "object": community_id
-}
-```
-#### [Delete](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-delete)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Delete",
-  "actor": id,
-  "object": community_id
-}
-```
+### Create
 
-#### [Update](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-update)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Create",
-  "actor": id,
-  "object": community_id
-  TODO fields.
-}
-```
+### Update
 
-#### [Follow / Subscribe](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-follow)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Follow",
-  "actor": id
-  "object": community_id
-}
-```
+### Like
 
-#### [Ignore/ Unsubscribe](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-ignore)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Follow",
-  "actor": id
-  "object": community_id
-}
-```
-#### [Join / Become a Mod](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-join)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Join",
-  "actor": user_id,
-  "object": community_id
-}
-```
+### Dislike
 
-#### [Leave](https://www.w3.org/TR/activitystreams-vocabulary#dfn-leave)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Leave",
-  "actor": user_id,
-  "object": community_id
-}
-```
+### Remove
 
-### Moderator
-#### [Ban user from community / Block](https://www.w3.org/TR/activitystreams-vocabulary#dfn-block)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Remove",
-  "actor": mod_id,
-  "object": user_id,
-  "origin": group_id
-}
-```
+### Delete
 
-#### [Delete Comment](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-delete)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Delete",
-  "actor": id,
-  "object": community_id
-}
-```
+### Announce
 
-#### [Invite a moderator](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-invite)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Invite",
-  "id": "https://instance_url/api/v1/invite/1",
-  "actor": sally_id,
-  "object": group_id,
-  "target": john_id
-}
-```
-#### [Accept Invitation](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-accept)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Accept",
-  "actor": john_id,
-  "object": invite_id
-}
-```
-#### [Reject Invitation](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-reject)
-```
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "Reject",
-  "actor": john_id,
-  "object": invite_id
-}
-```
-
+### Undo
